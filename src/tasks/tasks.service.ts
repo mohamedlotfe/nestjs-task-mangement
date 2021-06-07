@@ -5,39 +5,46 @@ import { TaskRepository } from './task.repository';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
 import { TaskStatus } from './task-status.enum';
+import { User } from 'src/auth/user.entity';
 
 @Injectable()
 export class TasksService {
   constructor(
     @InjectRepository(TaskRepository) private tasksRepository: TaskRepository,
   ) {}
-  
-  getTasks(filterDto: GetTasksFilterDto): Promise<Task[]> {
-    return this.tasksRepository.getTasks(filterDto);
+
+  getTasks(filterDto: GetTasksFilterDto, user: User): Promise<Task[]> {
+    return this.tasksRepository.getTasks(filterDto, user);
   }
 
-  async getTaskById(id: number): Promise<Task> {
-    let task = await this.tasksRepository.findOne(id);
+  async getTaskById(id: number, user: User): Promise<Task> {
+    let task = await this.tasksRepository.findOne({
+      where: { id, userId: user.id },
+    });
     if (!task) throw new NotFoundException(`No Task found with this id ${id}`);
 
     return task;
   }
 
-  async createTask(createTaskDto: CreateTaskDto): Promise<Task> {
-    return this.tasksRepository.createTask(createTaskDto);
+  async createTask(createTaskDto: CreateTaskDto, user: User): Promise<Task> {
+    return this.tasksRepository.createTask(createTaskDto, user);
   }
 
-  async updateStatus(id: number, status: TaskStatus): Promise<Task> {
-    let task = await this.getTaskById(id);
+  async updateStatus(
+    id: number,
+    status: TaskStatus,
+    user: User,
+  ): Promise<Task> {
+    let task = await this.getTaskById(id, user);
     task.status = status;
 
     await task.save();
     return task;
   }
 
-  async deleteTask(id: number) {
-    let foundTask = await this.getTaskById(id);
-    await this.tasksRepository.delete(id);
-    return;
+  async deleteTask(id: number, user: User) {
+    let foundTask = await this.tasksRepository.delete({ id, userId: user.id });
+    if (foundTask.affected === 0)
+      throw new NotFoundException(`No Task found with this id ${id}`);
   }
 }

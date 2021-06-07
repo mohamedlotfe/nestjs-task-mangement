@@ -17,10 +17,12 @@ export class UserRepository extends Repository<User> {
     user.username = username;
     user.salt = await bcrypt.genSalt();
     user.password = await this.hashPassword(password, user.salt);
-
+    user.tasks = [];
     try {
       await user.save();
     } catch (error) {
+      console.log(error);
+
       if (error.code === '23505')
         throw new ConflictException('Username already exists');
       else throw new InternalServerErrorException();
